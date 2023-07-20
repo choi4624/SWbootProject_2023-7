@@ -5,11 +5,15 @@ import torch
 import torchvision.transforms as transforms
 from PIL import Image
 
+from fastapi import UploadFile
+
+
+
 app = FastAPI()
 
 # 미리 학습된 파이토치 모델 불러오기
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = torch.load("path/to/your/ckpt_file.pth", map_location=device)
+model = torch.load("/home/i4624/vscode/gitclone/SWbootProject_2023-7/2nd_cnn/fastapi/results/patchcore/mvtec/hazelnut/run/weights/model.ckpt", map_location=device)
 model.eval()
 
 # 이미지 변환 함수
@@ -24,7 +28,7 @@ def preprocess_image(image):
 
 # API 엔드포인트 정의
 @app.post("/predict/")
-async def predict(image_file: bytes = Upload(...)):
+async def predict(image_file: bytes = UploadFile):
     try:
         # 이미지 파일을 PIL Image로 변환
         image = Image.open(io.BytesIO(image_file)).convert("RGB")
