@@ -2,3 +2,5 @@
 /2nd_cnn/fastapi/model.ckpt
 /2nd_cnn/anomalib2/*
 /2nd_cnn/fastapi/results/patchcore/mvtec/hazelnut/run/weights/*
+/2nd_cnn/anomalib/*
+/2nd_cnn/fastapi/__pycahe__/*
