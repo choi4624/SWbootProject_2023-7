@@ -10,6 +10,8 @@ from fastapi.responses import FileResponse
 import torch
 import io
 import os 
+from datetime import datetime
+import shutil
 
 from typing import List
 from pytorch_lightning import Trainer
@@ -30,6 +32,23 @@ templates = Jinja2Templates(directory="templates")
 
 @app.get("/predict", response_class=HTMLResponse)
 async def upload_image_form():
+    # # Get the current date and time in YYYY-MM-DD format
+    # current_datetime = datetime.now().strftime("%Y-%m-%d")
+
+    # # Define the directory names for input and output archives
+    # input_archive_dir = f"./archive/{current_datetime}/input"
+    # output_archive_dir = f"./archive/{current_datetime}/output"
+
+    # # Move the input image to the input archive directory
+    # input_image_archive_path = os.path.join(input_archive_dir)   
+    # shutil.move('./input', input_image_archive_path)
+    # shutil.move('./output/input', input_image_archive_path)
+
+
+    # # Create the archive directories if they don't exist
+    # os.makedirs(input_archive_dir, exist_ok=True)
+    # os.makedirs(output_archive_dir, exist_ok=True)
+
     html_content = """
     <!DOCTYPE html>
     <html>
@@ -100,10 +119,14 @@ def infer(args: Namespace):
 
 @app.post("/predict/", response_class=HTMLResponse)
 async def predict_image(file: UploadFile = File(...)):
+    
+
     # Save the uploaded image content to the 'input' directory
     file_path = os.path.join('./input', file.filename)
     with open(file_path, "wb") as f:
         f.write(await file.read())
+
+
 
     args = Namespace(
         config='config.yaml',
