@@ -1,0 +1,13 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Result Image</title>
+</head>
+<body>
+    <h1>Result Image</h1>
+    {% for image_path in image_paths %}
+        <img src="/result/{{ image_path }}" alt="Result Image">
+    {% endfor %}
+</body>
+</html>
