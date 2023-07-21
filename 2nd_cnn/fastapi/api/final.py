@@ -28,26 +28,59 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/output", StaticFiles(directory="output"), name="output")
 templates = Jinja2Templates(directory="templates")
 
+def dir_cleaning():
+    # Create the base archive directories if they don't exist
+    os.makedirs('./input', exist_ok=True)
+    os.makedirs('./output/input', exist_ok=True)
+
+    # Get the current date and time in YYYY-MM-DD format
+    current_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M")
+
+     # Initialize a counter to keep track of uploads within the same second
+    upload_counter = 0
+
+    # Define the base directory names for input and output archives
+    base_input_archive_dir = f"./archive/{current_datetime}"
+    base_output_archive_dir = f"./archive/{current_datetime}"
+
+    # Create the base archive directories if they don't exist
+    os.makedirs(base_input_archive_dir, exist_ok=True)
+    os.makedirs(base_output_archive_dir, exist_ok=True)
+
+    # Create the subdirectory names using the upload counter
+    input_archive_dir = f"{base_input_archive_dir}/input_{upload_counter}"
+    output_archive_dir = f"{base_output_archive_dir}/output_{upload_counter}"
+
+    # Increment the upload counter if the subdirectories already exist
+    while os.path.exists(input_archive_dir) or os.path.exists(output_archive_dir):
+        upload_counter += 1
+        input_archive_dir = f"{base_input_archive_dir}/input_{upload_counter}"
+        output_archive_dir = f"{base_output_archive_dir}/output_{upload_counter}"
+
+    # Create the archive directories if they don't exist
+    os.makedirs(input_archive_dir, exist_ok=True)
+    os.makedirs(output_archive_dir, exist_ok=True)
+
+    # Move the input image to the input archive directory
+    shutil.move('./input', input_archive_dir)
+    # Move the output image to the output archive directory (if needed)
+    shutil.move('./output/input', output_archive_dir)
+    
+
+    # Create the base archive directories if they don't exist
+    # 옮길 때 디렉터리 단위로 움직이므로 다시 생성해줘야 함 
+    os.makedirs('./input', exist_ok=True)
+    os.makedirs('./output/input', exist_ok=True)
+
+
 
 
 @app.get("/predict", response_class=HTMLResponse)
 async def upload_image_form():
-    # # Get the current date and time in YYYY-MM-DD format
-    # current_datetime = datetime.now().strftime("%Y-%m-%d")
 
-    # # Define the directory names for input and output archives
-    # input_archive_dir = f"./archive/{current_datetime}/input"
-    # output_archive_dir = f"./archive/{current_datetime}/output"
-
-    # # Move the input image to the input archive directory
-    # input_image_archive_path = os.path.join(input_archive_dir)   
-    # shutil.move('./input', input_image_archive_path)
-    # shutil.move('./output/input', input_image_archive_path)
-
-
-    # # Create the archive directories if they don't exist
-    # os.makedirs(input_archive_dir, exist_ok=True)
-    # os.makedirs(output_archive_dir, exist_ok=True)
+    # cleaning pre trained result of images > move to archive 
+    # 아카이브로 던지는 코드, 분 단위로 폴더 분류 
+    dir_cleaning()
 
     html_content = """
     <!DOCTYPE html>
@@ -57,7 +90,7 @@ async def upload_image_form():
     </head>
     <body>
         <h1>Upload an Image</h1>
-        <form action="/predict/" method="post" enctype="multipart/form-data">
+        <form action="/predict" method="post" enctype="multipart/form-data">
             <input type="file" name="file">
             <input type="submit" value="Upload">
         </form>
@@ -117,16 +150,13 @@ def infer(args: Namespace):
     return predictions
 
 
-@app.post("/predict/", response_class=HTMLResponse)
+@app.post("/predict", response_class=HTMLResponse)
 async def predict_image(file: UploadFile = File(...)):
     
-
-    # Save the uploaded image content to the 'input' directory
+       # Save the uploaded image content to the 'input' directory
     file_path = os.path.join('./input', file.filename)
     with open(file_path, "wb") as f:
         f.write(await file.read())
-
-
 
     args = Namespace(
         config='config.yaml',
