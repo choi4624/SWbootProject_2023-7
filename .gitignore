@@ -7,3 +7,5 @@
 /2nd_cnn/anomalib/
 /2nd_cnn/anomalib2/
 /2nd_cnn/fastapi/api/model.ckpt
+/3rd_NLP/twcs.csv
+/3rd_NLP/processed.csv
