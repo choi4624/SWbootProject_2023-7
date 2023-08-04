@@ -1,3 +1,4 @@
+import datetime
 import io
 import fastapi
 from fastapi import FastAPI, File, UploadFile
@@ -5,6 +6,7 @@ import multipart
 import torch
 import requests
 import uvicorn
+import tempfile
 
 import base64
 import os
@@ -27,10 +29,14 @@ from sklearn.gaussian_process.kernels import DotProduct, RBF, RationalQuadratic
 app = FastAPI()
 
 
+
 @app.post("/predict")
 async def predict(file: UploadFile):
     # Read the file contents
-    data = await file.read()
+    file_path = save_uploaded_file(file)
+
+    # Load the data from the file
+    sample_data = load_data_from_pfile(file_path)
 
     # Load the PyTorch model
     device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu") # Declaring a variable "device" which will hold the device(i.e. either GPU or CPU) we are 
@@ -39,14 +45,45 @@ async def predict(file: UploadFile):
     model.load_state_dict(torch.load('/home/i4624/vscode/gitclone/SWbootProject_2023-7/Team-project/model/CNN-LSTM/inout/cnn_lstm_model3.pth'))
 
     # Do the inference
-    prediction = infer_model(model, data, device)
+    results = infer_model(model, file_path, device)
+
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[10,10])
+    ax.scatter(range(len(results['predictions'])), results['predictions'], c='b', marker='.', label='predictions')
+    ax.legend()
+
+    # Save the PNG file
+    fig_bytes = fig.savefig('temp.png', format='png')
+    encoded_image = base64.b64encode(fig_bytes.read())
+
+    # Save the PNG file to the server directory
+    filename = file.filename
+    date = datetime.datetime.now().strftime('%Y-%m-%d')
+    file_path = os.path.join('../output', date + '.png')
+    with open(file_path, 'wb') as f:
+        f.write(fig_bytes)
 
     # Return the prediction
-    return prediction
+    return encoded_image
 
 
+def save_uploaded_file(file):
+    """
+    Save the uploaded file to a temporary directory.
 
-def load_data_from_pfile(file):  # helper function
+    Args:
+        file: The uploaded file.
+
+    Returns:
+        The path to the saved file.
+    """
+    filename = file.filename
+    file_path = os.path.join(tempfile.gettempdir(), filename)
+    with open(file_path, 'wb') as f:
+        f.write(file.file.read())
+    return file_path
+
+    
+def load_data_from_pfile(file_path):  # helper function
     """
     Load the data from the pfile.
 
@@ -56,12 +93,8 @@ def load_data_from_pfile(file):  # helper function
     Returns:
         The data.
     """
-
-    if isinstance(file, UploadFile):
-        file = file.file
-        sample_data = pkl.load(file)
-    else:
-        sample_data = pkl.load(file)
+    with open(file_path, 'rb') as pfile:
+        sample_data = pkl.load(pfile)
     return sample_data
 
 
@@ -186,16 +219,9 @@ def infer_model(model, file, device):
 
     results = model_inference_helper(model, test_dataloader, device)
 
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[10,10])
-    ax.scatter(range(len(results['predictions'])), results['predictions'], c='b', marker='.', label='predictions')
-    ax.legend()
+  
 
-    fig_bytes = io.BytesIO()
-    plt.savefig(fig_bytes, format='png')
-    fig_bytes.seek(0)
-    encoded_image = base64.b64encode(fig_bytes.read())
-
-    return encoded_image
+    return results
 
 if __name__ == "__main__":
     uvicorn.run(app, host="localhost", port=8000)
